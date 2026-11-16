@@ -1,0 +1,39 @@
+# Flutter/Dart generated files
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec_overrides.yaml
+**/coverage/
+
+# Android local SDK settings and build output
+**/android/local.properties
+**/android/.gradle/
+**/android/captures/
+
+# Generated Apple platform files
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# IDE and editor files
+.idea/
+**/.idea/
+*.iml
+.vscode/
+
+# Node.js
+**/node_modules/
+npm-debug.log*
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pedidoapp_db
+    restart: always
+    environment:
+      POSTGRES_DB: pedidoapp
+      POSTGRES_USER: pedidoapp
+      POSTGRES_PASSWORD: pedidoapp123
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedidoapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pedidoapp_api
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://pedidoapp:pedidoapp123@postgres:5432/pedidoapp
+      PORT: 3000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
