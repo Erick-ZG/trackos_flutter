@@ -13,10 +13,15 @@ class OrderCard extends StatelessWidget {
   Color _statusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
+      case OrderStatus.stockVerified:
+      case OrderStatus.preparing:
         return const Color(0xFFD97706);
+      case OrderStatus.readyForPickup:
       case OrderStatus.inTransit:
         return const Color(0xFF2563EB);
+      case OrderStatus.courierArrivedStore:
       case OrderStatus.outForDelivery:
+      case OrderStatus.arrivedDestination:
         return Colors.deepOrange;
       case OrderStatus.delivered:
         return const Color(0xFF059669);
@@ -26,11 +31,19 @@ class OrderCard extends StatelessWidget {
   IconData _statusIcon(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
+      case OrderStatus.stockVerified:
         return Icons.hourglass_empty_rounded;
+      case OrderStatus.preparing:
+        return Icons.inventory_2_rounded;
+      case OrderStatus.readyForPickup:
+        return Icons.store_rounded;
       case OrderStatus.inTransit:
         return Icons.local_shipping_rounded;
+      case OrderStatus.courierArrivedStore:
       case OrderStatus.outForDelivery:
         return Icons.delivery_dining_rounded;
+      case OrderStatus.arrivedDestination:
+        return Icons.location_on_rounded;
       case OrderStatus.delivered:
         return Icons.check_circle_rounded;
     }

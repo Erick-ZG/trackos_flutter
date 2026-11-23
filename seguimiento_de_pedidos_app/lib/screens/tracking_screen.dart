@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../models/tracking.dart';
 import '../services/app_service.dart';
+import '../widgets/order_chat_sheet.dart';
 import '../widgets/tracking_map.dart';
 
 class TrackingScreen extends StatefulWidget {
@@ -29,16 +32,40 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Timer? _animationTimeout;
   bool _needsRefresh = false;
   late final TrackingRepository _repository;
+  StreamSubscription? _wsSub;
+  double? _liveCourierLat;
+  double? _liveCourierLng;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? AppService();
+    if (widget.repository == null) {
+      AppService().subscribeOrder(widget.orderId);
+      _wsSub = AppService().realtimeEvents.listen((event) {
+        final type = event['type'];
+        final payload = event['payload'];
+        if (payload is! Map || '${payload['orderId']}' != widget.orderId) {
+          return;
+        }
+        if (type == 'courier_location') {
+          if (mounted) {
+            setState(() {
+              _liveCourierLat = (payload['lat'] as num?)?.toDouble();
+              _liveCourierLng = (payload['lng'] as num?)?.toDouble();
+            });
+          }
+        } else if (type == 'order_updated') {
+          _load();
+        }
+      });
+    }
     _load();
   }
 
   @override
   void dispose() {
+    _wsSub?.cancel();
     _animationTimeout?.cancel();
     super.dispose();
   }
@@ -53,6 +80,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
       if (!mounted) return;
       setState(() {
         _data = data;
+        _liveCourierLat = data.courierLat ?? _liveCourierLat;
+        _liveCourierLng = data.courierLng ?? _liveCourierLng;
         _needsRefresh = false;
       });
     } catch (error) {
@@ -100,6 +129,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
       case 'delivered':
         return const Color(0xFF059669);
       case 'out_for_delivery':
+      case 'arrived_destination':
+      case 'courier_arrived_store':
         return scheme.primary;
       case 'in_transit':
         return const Color(0xFF2563EB);
@@ -113,12 +144,29 @@ class _TrackingScreenState extends State<TrackingScreen> {
       case 'delivered':
         return Icons.check_circle_rounded;
       case 'out_for_delivery':
+      case 'courier_arrived_store':
         return Icons.delivery_dining_rounded;
+      case 'arrived_destination':
+        return Icons.location_on_rounded;
       case 'in_transit':
         return Icons.local_shipping_rounded;
       default:
         return Icons.schedule_rounded;
     }
+  }
+
+  void _openChat(TrackingData data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => OrderChatSheet(
+        orderId: widget.orderId,
+        title: 'Chat con ${data.courierName ?? 'Repartidor'}',
+      ),
+    );
   }
 
   @override
@@ -128,6 +176,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final canOperate =
         !_busy && !_animating && !_needsRefresh && sim != null && sim.enabled;
+    final hasRealtimeCoords =
+        data != null &&
+        data.pickupLat != null &&
+        data.pickupLng != null &&
+        data.deliveryLat != null &&
+        data.deliveryLng != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -148,6 +202,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
           ],
         ),
         actions: [
+          if (data?.courierName != null && widget.repository == null)
+            IconButton(
+              tooltip: 'Chatear con repartidor',
+              onPressed: () => _openChat(data!),
+              icon: const Icon(Icons.chat_bubble_outline),
+            ),
           IconButton(
             tooltip: 'Actualizar seguimiento',
             onPressed: _busy || _animating ? null : _load,
@@ -188,9 +248,43 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         ),
                       ),
                     if (data != null) ...[
-                      _buildHeaderCard(context, data, sim, colorScheme),
+                      _buildHeaderCard(
+                        context,
+                        data,
+                        sim,
+                        hasRealtimeCoords,
+                        colorScheme,
+                      ),
                       const SizedBox(height: 10),
-                      if (sim != null) ...[
+                      if (hasRealtimeCoords) ...[
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final liveMap = _buildLiveMapCard(data, colorScheme);
+                            final workflowCard = _buildWorkflowCard(
+                              data,
+                              colorScheme,
+                            );
+                            if (constraints.maxWidth >= 900) {
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(flex: 3, child: liveMap),
+                                  const SizedBox(width: 18),
+                                  Expanded(flex: 2, child: workflowCard),
+                                ],
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                liveMap,
+                                const SizedBox(height: 12),
+                                workflowCard,
+                              ],
+                            );
+                          },
+                        ),
+                      ] else if (sim != null) ...[
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final mapCard = Card(
@@ -253,7 +347,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                           child: Padding(
                             padding: EdgeInsets.all(16),
                             child: Text(
-                              'Este pedido no tiene una ruta de prueba. Crea un pedido nuevo con el modo de prueba académica habilitado.',
+                              'Este pedido aún no tiene coordenadas de seguimiento.',
                             ),
                           ),
                         ),
@@ -298,9 +392,21 @@ class _TrackingScreenState extends State<TrackingScreen> {
     BuildContext context,
     TrackingData data,
     TrackingSimulation? sim,
+    bool hasRealtime,
     ColorScheme colorScheme,
   ) {
     final statusColor = _statusColor(data.status, colorScheme);
+    final progress = hasRealtime
+        ? data.workflowProgress
+        : (sim?.progress ?? data.workflowProgress);
+    final headline = hasRealtime
+        ? data.statusLabel
+        : (sim != null
+              ? (sim.delivered
+                    ? 'Tu pedido llegó a su destino'
+                    : 'Ubicación actual: ${sim.currentNode.name}')
+              : data.statusLabel);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -345,49 +451,308 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     ],
                   ),
                 ),
-                const Chip(
-                  avatar: Icon(Icons.science_outlined, size: 16),
-                  label: Text(
-                    'Prueba académica',
-                    style: TextStyle(fontSize: 12),
+                if (data.courierName != null && widget.repository == null)
+                  FilledButton.tonalIcon(
+                    onPressed: () => _openChat(data),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                    label: Text('Mensaje a ${data.courierName}'),
+                  )
+                else
+                  const Chip(
+                    avatar: Icon(Icons.science_outlined, size: 16),
+                    label: Text(
+                      'Tiempo real',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    visualDensity: VisualDensity.compact,
                   ),
-                  visualDensity: VisualDensity.compact,
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    headline,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.primary,
+                  ),
                 ),
               ],
             ),
-            if (sim != null) ...[
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      sim.delivered
-                          ? 'Tu pedido llegó a su destino'
-                          : 'Ubicación actual: ${sim.currentNode.name}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: Colors.grey.shade200,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveMapCard(TrackingData data, ColorScheme colorScheme) {
+    final pickup = LatLng(data.pickupLat!, data.pickupLng!);
+    final delivery = LatLng(data.deliveryLat!, data.deliveryLng!);
+    final courierLat = _liveCourierLat ?? data.courierLat;
+    final courierLng = _liveCourierLng ?? data.courierLng;
+    final hasCourier = courierLat != null && courierLng != null;
+    final points = [
+      pickup,
+      delivery,
+      if (hasCourier) LatLng(courierLat, courierLng),
+    ];
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 360,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCameraFit: CameraFit.bounds(
+                      bounds: LatLngBounds.fromPoints(points),
+                      padding: const EdgeInsets.all(48),
+                      maxZoom: 16,
                     ),
                   ),
-                  Text(
-                    '${(sim.progress * 100).round()}%',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: colorScheme.primary,
+                  children: [
+                    if (widget.loadMapTiles)
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'TrackosAcademicDemo/1.0',
+                      ),
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: [pickup, delivery],
+                          color: Colors.blueGrey.shade300,
+                          strokeWidth: 4,
+                        ),
+                      ],
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: pickup,
+                          width: 40,
+                          height: 40,
+                          child: Tooltip(
+                            message:
+                                'Recojo: ${data.branchName ?? 'Sede'} (${data.pickupAddress ?? ''})',
+                            child: const CircleAvatar(
+                              backgroundColor: Color(0xFF2563EB),
+                              child: Icon(
+                                Icons.store,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Marker(
+                          point: delivery,
+                          width: 40,
+                          height: 40,
+                          child: Tooltip(
+                            message: 'Tu punto de entrega: ${data.deliveryAddress ?? ''}',
+                            child: const CircleAvatar(
+                              backgroundColor: Color(0xFF059669),
+                              child: Icon(
+                                Icons.home,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (hasCourier)
+                          Marker(
+                            point: LatLng(courierLat, courierLng),
+                            width: 46,
+                            height: 46,
+                            child: Tooltip(
+                              message: '${data.courierName ?? 'Repartidor'} en vivo',
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2.5,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.delivery_dining,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                _legendItem(const Color(0xFF2563EB), Icons.store, 'Punto de recojo'),
+                _legendItem(colorScheme.primary, Icons.delivery_dining, 'Motorizado en vivo'),
+                _legendItem(const Color(0xFF059669), Icons.home, 'Tu entrega'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _legendItem(Color color, IconData icon, String text) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 16, color: color),
+      const SizedBox(width: 4),
+      Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+    ],
+  );
+
+  Widget _buildWorkflowCard(TrackingData data, ColorScheme colorScheme) {
+    final steps = [
+      ('stock_verified', 'Stock verificado en almacén'),
+      ('preparing', 'Preparado'),
+      ('ready_for_pickup', 'Listo para recojo'),
+      (
+        'courier_arrived_store',
+        '${data.courierName ?? 'Repartidor'} llegó a la tienda',
+      ),
+      ('in_transit', 'En camino'),
+      ('arrived_destination', 'Llegó al punto de entrega'),
+      ('delivered', 'Entregado'),
+    ];
+    final orderIndex = steps.indexWhere((s) => s.$1 == data.status);
+    final activeIdx = orderIndex == -1 ? 0 : orderIndex;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Estado del pedido',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Recojo: ${data.branchName ?? 'Sede'} · ${data.pickupAddress ?? ''}',
+              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+            ),
+            Text(
+              'Entrega: ${data.deliveryAddress ?? ''}',
+              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700),
+            ),
+            const Divider(height: 18),
+            for (var i = 0; i < steps.length; i++)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: i <= activeIdx
+                              ? colorScheme.primary
+                              : Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          i < activeIdx
+                              ? Icons.check
+                              : (i == activeIdx
+                                    ? Icons.radio_button_checked
+                                    : Icons.circle),
+                          size: i <= activeIdx ? 14 : 8,
+                          color: i <= activeIdx
+                              ? Colors.white
+                              : Colors.grey.shade500,
+                        ),
+                      ),
+                      if (i < steps.length - 1)
+                        Container(
+                          width: 2,
+                          height: 20,
+                          color: i < activeIdx
+                              ? colorScheme.primary
+                              : Colors.grey.shade300,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2, bottom: 8),
+                      child: Text(
+                        steps[i].$2,
+                        style: TextStyle(
+                          fontWeight: i == activeIdx
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                          color: i <= activeIdx
+                              ? const Color(0xFF0F172A)
+                              : Colors.grey.shade500,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
+            if (data.deliveryProofImage != null &&
+                data.deliveryProofImage!.isNotEmpty) ...[
+              const Divider(height: 18),
+              const Text(
+                'Evidencia fotográfica de entrega',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
               const SizedBox(height: 8),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: sim.progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  AppService().resolveMediaUrl(data.deliveryProofImage),
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
             ],
@@ -503,7 +868,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   ) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -606,9 +971,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
     ColorScheme colorScheme,
   ) {
     final trackingCode = data.shipment['tracking_code']?.toString();
+    final dur = data.deliveryDurationSeconds;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -643,15 +1009,19 @@ class _TrackingScreenState extends State<TrackingScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Courier: ${data.shipment['courier_name']?.toString() ?? 'No asignado'}',
+              'Repartidor: ${data.courierName ?? 'Por asignar'}',
             ),
-            if (data.shipment['courier_phone'] != null) ...[
-              const SizedBox(height: 4),
-              Text('Contacto demo: ${data.shipment['courier_phone']}'),
-            ],
+            Text(
+              'Costo de delivery: \$${data.deliveryFee.toStringAsFixed(2)}',
+            ),
+            if (dur != null)
+              Text(
+                'Tiempo total de entrega: ${dur ~/ 60}m ${dur % 60}s',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
             const SizedBox(height: 4),
             Text(
-              'Destino: ${data.shipment['delivery_address']?.toString() ?? 'Por confirmar'}',
+              'Destino: ${data.deliveryAddress ?? 'Por confirmar'}',
             ),
             if (data.shipment['delivered_at'] != null) ...[
               const SizedBox(height: 10),
@@ -666,7 +1036,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     Icon(Icons.check_circle, color: Color(0xFF059669)),
                     SizedBox(width: 8),
                     Text(
-                      'Entrega de prueba confirmada',
+                      'Entrega confirmada',
                       style: TextStyle(
                         color: Color(0xFF065F46),
                         fontWeight: FontWeight.w700,
@@ -685,12 +1055,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Widget _buildEventsCard(BuildContext context, TrackingData data) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Historial del ensayo actual',
+              'Historial en tiempo real',
               style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
             ),
             const SizedBox(height: 8),

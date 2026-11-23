@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/cart_item.dart';
+import '../models/order.dart';
 import '../services/app_service.dart';
 import '../widgets/product_card.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onOrderPlaced;
@@ -28,55 +30,23 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {});
   }
 
-  void _placeOrder() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar pedido'),
+  Future<void> _placeOrder() async {
+    final Order? order = await Navigator.of(context).push<Order>(
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    );
+    if (order == null || !mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Text(
-          '¿Deseas realizar el pedido por \$${AppService().cartTotal.toStringAsFixed(2)}?',
+          '¡Pedido ${order.id} realizado! Envío: \$${order.deliveryFee.toStringAsFixed(2)}',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              () async {
-                try {
-                  final order = await AppService().placeOrder();
-                  if (!mounted) return;
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('¡Pedido ${order.id} realizado con éxito!'),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  // Navigate back and open orders tab
-                  widget.onOrderPlaced?.call();
-                  Navigator.of(context).pop();
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          e.toString().replaceFirst('Exception: ', ''),
-                        ),
-                      ),
-                    );
-                  }
-                }
-              }();
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
+    widget.onOrderPlaced?.call();
+    Navigator.of(context).pop();
   }
 
   @override

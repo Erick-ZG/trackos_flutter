@@ -56,32 +56,106 @@ class TrackingSimulation {
   }
 }
 
+class OrderMessage {
+  final String id;
+  final String orderId;
+  final String senderId;
+  final String senderName;
+  final String senderRole;
+  final String message;
+  final DateTime createdAt;
+
+  const OrderMessage({
+    required this.id,
+    required this.orderId,
+    required this.senderId,
+    required this.senderName,
+    required this.senderRole,
+    required this.message,
+    required this.createdAt,
+  });
+
+  factory OrderMessage.fromJson(Map<String, dynamic> json) => OrderMessage(
+    id: json['id'].toString(),
+    orderId: json['order_id'].toString(),
+    senderId: json['sender_id'].toString(),
+    senderName: json['sender_name']?.toString() ?? 'Usuario',
+    senderRole: json['sender_role']?.toString() ?? 'customer',
+    message: json['message']?.toString() ?? '',
+    createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+        DateTime.now(),
+  );
+}
+
 class TrackingData {
   final String orderId;
   final String status;
+  final Map<String, dynamic> order;
   final Map<String, dynamic> shipment;
   final List<Map<String, dynamic>> events;
   final TrackingSimulation? simulation;
+
   const TrackingData({
     required this.orderId,
     required this.status,
+    this.order = const {},
     required this.shipment,
     required this.events,
     this.simulation,
   });
+
+  String? get courierName =>
+      order['courier_name']?.toString() ?? shipment['courier_name']?.toString();
+  String? get branchName => order['branch_name']?.toString();
+  String? get pickupAddress => order['pickup_address']?.toString();
+  double? get pickupLat => (order['pickup_lat'] as num?)?.toDouble();
+  double? get pickupLng => (order['pickup_lng'] as num?)?.toDouble();
+  String? get deliveryAddress =>
+      order['delivery_address']?.toString() ??
+      shipment['delivery_address']?.toString();
+  double? get deliveryLat => (order['delivery_lat'] as num?)?.toDouble();
+  double? get deliveryLng => (order['delivery_lng'] as num?)?.toDouble();
+  double? get courierLat => (order['courier_lat'] as num?)?.toDouble();
+  double? get courierLng => (order['courier_lng'] as num?)?.toDouble();
+  double get deliveryFee => (order['delivery_fee'] as num?)?.toDouble() ?? 0.0;
+  int? get deliveryDurationSeconds =>
+      (order['delivery_duration_seconds'] as num?)?.toInt();
+  String? get deliveryProofImage =>
+      order['delivery_proof_image']?.toString() ??
+      shipment['delivery_photo_url']?.toString();
+  String? get acceptedAt => order['accepted_at']?.toString();
+
+  double get workflowProgress => switch (status) {
+    'stock_verified' || 'pending' => 0.14,
+    'preparing' => 0.28,
+    'ready_for_pickup' => 0.42,
+    'courier_arrived_store' => 0.58,
+    'in_transit' || 'shipped' => 0.74,
+    'out_for_delivery' || 'arrived_destination' => 0.88,
+    'delivered' => 1.0,
+    _ => 0.1,
+  };
+
   String get statusLabel => switch (status) {
+    'stock_verified' => 'Stock verificado',
+    'preparing' => 'Preparado',
+    'ready_for_pickup' => 'Listo para recojo',
+    'courier_arrived_store' =>
+      '${courierName ?? 'Repartidor'} llegó a la tienda',
     'in_transit' || 'shipped' => 'En camino',
     'out_for_delivery' => 'En reparto',
+    'arrived_destination' => 'Llegó al punto de entrega',
     'delivered' => 'Entregado',
     _ => 'Pendiente',
   };
+
   factory TrackingData.fromJson(Map<String, dynamic> json) => TrackingData(
     orderId: json['orderId'] as String,
     status: json['status'] as String,
+    order: Map<String, dynamic>.from(json['order'] as Map? ?? {}),
     shipment: Map<String, dynamic>.from(json['shipment'] as Map? ?? {}),
     events: (json['events'] as List? ?? []).map((e) {
       final event = Map<String, dynamic>.from(e as Map);
-      // Adapt legacy timeline labels without rewriting stored events.
       event['description'] = (event['description']?.toString() ?? '')
           .replaceAll('Simulación iniciada.', 'Prueba académica iniciada.')
           .replaceAll('Pedido simulado en:', 'Pedido en punto de prueba:');
