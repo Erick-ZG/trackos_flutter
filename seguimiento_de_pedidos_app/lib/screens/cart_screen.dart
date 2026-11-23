@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../services/app_service.dart';
 import '../models/cart_item.dart';
+import '../services/app_service.dart';
+import '../widgets/product_card.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onOrderPlaced;
@@ -89,6 +90,7 @@ class _CartScreenState extends State<CartScreen> {
         actions: [
           if (cart.isNotEmpty)
             TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
               onPressed: () {
                 AppService().clearCart().then((_) {
                   if (mounted) setState(() {});
@@ -150,19 +152,15 @@ class _CartScreenState extends State<CartScreen> {
                           padding: const EdgeInsets.all(12),
                           child: Row(
                             children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: item.product.color.withValues(
-                                    alpha: 0.15,
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(
+                                  width: 58,
+                                  height: 58,
+                                  child: ProductImage(
+                                    product: item.product,
+                                    fallbackIconSize: 28,
                                   ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  item.product.icon,
-                                  color: item.product.color,
-                                  size: 30,
                                 ),
                               ),
                               const SizedBox(width: 12),

@@ -20,4 +20,6 @@ class Product {
     required this.icon,
     required this.color,
   });
+
+  String get imageAsset => 'assets/images/products/$id.jpg';
 }

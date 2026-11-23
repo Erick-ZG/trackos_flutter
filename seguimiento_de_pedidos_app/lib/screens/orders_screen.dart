@@ -43,7 +43,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       children: [
                         Icon(
                           Icons.receipt_long_outlined,
-                          size: 90,
+                          size: 84,
                           color: Colors.grey[300],
                         ),
                         const SizedBox(height: 16),
@@ -51,13 +51,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           'No tienes pedidos aún',
                           style: TextStyle(
                             fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[700],
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
-                          'Tus pedidos aparecerán aquí',
+                          'Realiza una compra y síguela en tiempo real en el mapa',
                           style: TextStyle(color: Colors.grey[500]),
                         ),
                       ],
@@ -66,15 +66,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
               ],
             )
-          : ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: orders.length,
-              itemBuilder: (_, i) => OrderCard(
-                order: orders[i],
-                onTrackingClosed: () {
-                  if (mounted) setState(() {});
-                },
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 920),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: orders.length,
+                  itemBuilder: (_, i) => OrderCard(
+                    order: orders[i],
+                    onTrackingClosed: () {
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ),
               ),
             ),
     );

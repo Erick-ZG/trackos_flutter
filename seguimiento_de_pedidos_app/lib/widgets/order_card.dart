@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/order.dart';
 import '../screens/tracking_screen.dart';
+import 'product_card.dart';
 
 class OrderCard extends StatelessWidget {
   final Order order;
@@ -12,26 +13,26 @@ class OrderCard extends StatelessWidget {
   Color _statusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return Colors.orange;
+        return const Color(0xFFD97706);
       case OrderStatus.inTransit:
-        return Colors.blue;
+        return const Color(0xFF2563EB);
       case OrderStatus.outForDelivery:
         return Colors.deepOrange;
       case OrderStatus.delivered:
-        return Colors.green;
+        return const Color(0xFF059669);
     }
   }
 
   IconData _statusIcon(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return Icons.hourglass_empty;
+        return Icons.hourglass_empty_rounded;
       case OrderStatus.inTransit:
-        return Icons.local_shipping;
+        return Icons.local_shipping_rounded;
       case OrderStatus.outForDelivery:
-        return Icons.delivery_dining;
+        return Icons.delivery_dining_rounded;
       case OrderStatus.delivered:
-        return Icons.check_circle;
+        return Icons.check_circle_rounded;
     }
   }
 
@@ -39,13 +40,12 @@ class OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateStr =
         '${order.createdAt.day.toString().padLeft(2, '0')}/${order.createdAt.month.toString().padLeft(2, '0')}/${order.createdAt.year}  ${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}';
+    final statusColor = _statusColor(order.status);
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => _showTracking(context),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -55,57 +55,87 @@ class OrderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    order.id,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.id,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Chip(
-                    avatar: Icon(
-                      _statusIcon(order.status),
-                      color: _statusColor(order.status),
-                      size: 16,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                    label: Text(
-                      order.statusLabel,
-                      style: TextStyle(
-                        color: _statusColor(order.status),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.4),
                       ),
                     ),
-                    backgroundColor: _statusColor(order.status)
-                        .withValues(alpha: 0.1),
-                    side: BorderSide(
-                      color: _statusColor(order.status),
-                      width: 1,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _statusIcon(order.status),
+                          color: statusColor,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          order.statusLabel,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
                   ),
                 ],
               ),
-              Text(
-                dateStr,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-              const Divider(height: 16),
+              const Divider(height: 20),
               ...order.items.map(
                 (item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
-                      Icon(
-                        item.product.icon,
-                        size: 18,
-                        color: item.product.color,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: SizedBox(
+                          width: 38,
+                          height: 38,
+                          child: ProductImage(
+                            product: item.product,
+                            fallbackIconSize: 20,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           item.product.name,
-                          style: const TextStyle(fontSize: 13),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -113,33 +143,42 @@ class OrderCard extends StatelessWidget {
                         'x${item.quantity}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Text(
                         '\$${item.subtotal.toStringAsFixed(2)}',
                         style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const Divider(height: 16),
+              const Divider(height: 20),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Total: ',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Text(
+                        'Total: ',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '\$${order.total.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '\$${order.total.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _showTracking(context),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: const Text('Seguir en mapa'),
                   ),
                 ],
               ),
@@ -152,9 +191,7 @@ class OrderCard extends StatelessWidget {
 
   Future<void> _showTracking(BuildContext context) async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => TrackingScreen(orderId: order.id),
-      ),
+      MaterialPageRoute(builder: (_) => TrackingScreen(orderId: order.id)),
     );
     onTrackingClosed?.call();
   }
