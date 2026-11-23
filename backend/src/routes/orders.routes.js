@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const orders = require('../controllers/orders.controller');
+const tracking = require('../controllers/tracking.controller');
+router.use(require('../middleware/auth'));
+router.get('/', orders.list);
+router.post('/', orders.create);
+router.get('/:id/tracking', tracking.get);
+router.post('/:id/simulation/advance', tracking.advance);
+router.post('/:id/simulation/reset', tracking.reset);
+module.exports = router;

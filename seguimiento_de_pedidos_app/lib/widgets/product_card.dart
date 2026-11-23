@@ -27,11 +27,11 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Container(
-                color: product.color.withOpacity(0.15),
+                color: product.color.withValues(alpha: 0.15),
                 child: Icon(
                   product.icon,
                   size: 56,
-                  color: product.color.withOpacity(0.85),
+                  color: product.color.withValues(alpha: 0.85),
                 ),
               ),
             ),

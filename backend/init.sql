@@ -93,9 +93,9 @@ VALUES (
   'a0000000-0000-0000-0000-000000000001',
   'Usuario Demo',
   'demo@test.com',
-  '$2a$10$YvlQVWvCzC0gON.OmC3oJOBvfM5kxFiJgm.rPMEMR8hFGHKMJWNou',
-  '+34 600 000 000',
-  'Calle Ejemplo 123, Madrid'
+  '$2a$10$jDlJ4UBdX/w.O0jD3zdlMOmFdeZ3w53SihhxJP3rQ16.ALPSZqAu2',
+  '+51 900 000 000',
+  'Destino ficticio de demostración, Trujillo, Perú'
 ) ON CONFLICT DO NOTHING;
 
 -- Products seed

@@ -37,3 +37,7 @@ npm-debug.log*
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Local Flutter demo configuration (API key)
+**/config/demo.local.json
+**/android/.kotlin/

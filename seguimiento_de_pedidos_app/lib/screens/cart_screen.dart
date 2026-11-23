@@ -137,7 +137,7 @@ class _CartScreenState extends State<CartScreen> {
                                 height: 56,
                                 decoration: BoxDecoration(
                                   color:
-                                      item.product.color.withOpacity(0.15),
+                                      item.product.color.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(item.product.icon,

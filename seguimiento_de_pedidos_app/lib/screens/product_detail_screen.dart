@@ -58,8 +58,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Container(
               height: 220,
-              color: product.color.withOpacity(0.15),
-              child: Icon(product.icon, size: 110, color: product.color.withOpacity(0.8)),
+              color: product.color.withValues(alpha: 0.15),
+              child: Icon(product.icon, size: 110, color: product.color.withValues(alpha: 0.8)),
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -71,7 +71,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     children: [
                       Chip(
                         label: Text(product.category),
-                        backgroundColor: product.color.withOpacity(0.1),
+                        backgroundColor: product.color.withValues(alpha: 0.1),
                         labelStyle: TextStyle(color: product.color),
                       ),
                       Text(

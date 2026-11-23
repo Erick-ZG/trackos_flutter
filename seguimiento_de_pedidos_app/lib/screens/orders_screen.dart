@@ -18,7 +18,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron actualizar los pedidos: $error')),
+        SnackBar(
+          content: Text('No se pudieron actualizar los pedidos: $error'),
+        ),
       );
     }
   }
@@ -39,8 +41,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 90, color: Colors.grey[300]),
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: 90,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No tienes pedidos aún',
@@ -65,7 +70,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: orders.length,
-              itemBuilder: (_, i) => OrderCard(order: orders[i]),
+              itemBuilder: (_, i) => OrderCard(
+                order: orders[i],
+                onTrackingClosed: () {
+                  if (mounted) setState(() {});
+                },
+              ),
             ),
     );
   }

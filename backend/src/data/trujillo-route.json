@@ -1,0 +1,37 @@
+{
+  "id": "trujillo-demo-v1",
+  "name": "Recorrido académico por Trujillo",
+  "notice": "Coordenadas aproximadas y trazado ilustrativo; no representa navegación vial ni una dirección real del comprador.",
+  "nodes": [
+    {
+      "name": "Almacén demo — referencia Óvalo Papal",
+      "latitude": -8.1261,
+      "longitude": -79.0361,
+      "status": "pending"
+    },
+    {
+      "name": "Punto de paso — avenida España",
+      "latitude": -8.1179,
+      "longitude": -79.0341,
+      "status": "in_transit"
+    },
+    {
+      "name": "Referencia Plaza de Armas",
+      "latitude": -8.1116,
+      "longitude": -79.0288,
+      "status": "in_transit"
+    },
+    {
+      "name": "Referencia plazuela El Recreo",
+      "latitude": -8.1062,
+      "longitude": -79.0233,
+      "status": "out_for_delivery"
+    },
+    {
+      "name": "Destino ficticio — sector América Norte",
+      "latitude": -8.0988,
+      "longitude": -79.0205,
+      "status": "delivered"
+    }
+  ]
+}
