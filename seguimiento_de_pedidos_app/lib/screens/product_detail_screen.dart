@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/product.dart';
 import '../services/app_service.dart';
 
@@ -27,19 +28,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Future<void> _addToCart() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-    await AppService().addToCart(widget.product, quantity: _quantity);
-    if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-            '${_quantity}x ${widget.product.name} agregado al carrito'),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    Navigator.of(context).pop();
+      await AppService().addToCart(widget.product, quantity: _quantity);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_quantity}x ${widget.product.name} agregado al carrito',
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) messenger.showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     }
   }
 
@@ -59,7 +65,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Container(
               height: 220,
               color: product.color.withValues(alpha: 0.15),
-              child: Icon(product.icon, size: 110, color: product.color.withValues(alpha: 0.8)),
+              child: Icon(
+                product.icon,
+                size: 110,
+                color: product.color.withValues(alpha: 0.8),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -90,9 +100,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 10),
                   Text(
                     product.name,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
+                    style: Theme.of(context).textTheme.headlineSmall
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -107,9 +115,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 14),
                   Text(
                     'Descripción',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
+                    style: Theme.of(context).textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
@@ -121,9 +127,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (product.stock > 0) ...[
                     Text(
                       'Cantidad',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
+                      style: Theme.of(context).textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
@@ -137,12 +141,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         Text(
                           '$_quantity',
                           style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         IconButton.outlined(
-                          onPressed:
-                              _quantity < product.stock ? _increase : null,
+                          onPressed: _quantity < product.stock
+                              ? _increase
+                              : null,
                           icon: const Icon(Icons.add),
                         ),
                         const SizedBox(width: 16),
@@ -159,8 +166,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       child: FilledButton.icon(
                         onPressed: _addToCart,
                         icon: const Icon(Icons.shopping_cart),
-                        label: const Text('Agregar al Carrito',
-                            style: TextStyle(fontSize: 16)),
+                        label: const Text(
+                          'Agregar al Carrito',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
                   ] else
@@ -169,8 +178,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       height: 52,
                       child: OutlinedButton(
                         onPressed: null,
-                        child: const Text('Sin stock disponible',
-                            style: TextStyle(fontSize: 16)),
+                        child: const Text(
+                          'Sin stock disponible',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
                 ],

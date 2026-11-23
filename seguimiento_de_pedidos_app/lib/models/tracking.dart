@@ -42,7 +42,7 @@ class TrackingSimulation {
         .toList();
     final index = json['currentNodeIndex'] as int;
     if (nodes.length < 2 || index < 0 || index >= nodes.length) {
-      throw const FormatException('Ruta de simulación inválida');
+      throw const FormatException('Ruta de prueba académica inválida');
     }
     return TrackingSimulation(
       enabled: json['enabled'] == true,
@@ -79,9 +79,14 @@ class TrackingData {
     orderId: json['orderId'] as String,
     status: json['status'] as String,
     shipment: Map<String, dynamic>.from(json['shipment'] as Map? ?? {}),
-    events: (json['events'] as List? ?? [])
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList(),
+    events: (json['events'] as List? ?? []).map((e) {
+      final event = Map<String, dynamic>.from(e as Map);
+      // Adapt legacy timeline labels without rewriting stored events.
+      event['description'] = (event['description']?.toString() ?? '')
+          .replaceAll('Simulación iniciada.', 'Prueba académica iniciada.')
+          .replaceAll('Pedido simulado en:', 'Pedido en punto de prueba:');
+      return event;
+    }).toList(),
     simulation: json['simulation'] == null
         ? null
         : TrackingSimulation.fromJson(

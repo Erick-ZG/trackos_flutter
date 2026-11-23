@@ -1,53 +1,59 @@
 # Trackos — seguimiento simulado en Trujillo
 
-Aplicación académica Flutter + Express + PostgreSQL. Incluye cuentas, catálogo, carrito, compra simulada y seguimiento manual por cinco nodos. Google Maps muestra el recorrido en Android; el backend administra el avance y lo conserva por pedido. No utiliza GPS, pagos, repartidores reales ni APIs de cálculo de rutas.
+Aplicación académica Flutter + Express + PostgreSQL. Incluye cuentas, catálogo, carrito, compra simulada y seguimiento manual por cinco nodos. OpenStreetMap muestra el recorrido en web y Android; el backend administra el avance y lo conserva por pedido. No utiliza GPS, pagos, repartidores reales ni APIs de cálculo de rutas.
 
-## Inicio rápido con Git Bash en Windows
+## Presentación virtual desde el navegador
 
-Desde la raíz del repositorio:
+No se necesita dispositivo, emulador, cuenta de mapas ni clave de API. Ejecuta los siguientes comandos con **Git Bash** desde la raíz del repositorio.
+
+### Opción rápida: versión web compilada
+
+Terminal 1:
 
 ```bash
 docker compose up -d --build
-curl http://localhost:3000/health
+(cd seguimiento_de_pedidos_app && flutter pub get && flutter build web)
+(cd backend && npm ci && npm run demo:web)
+```
+
+Abrir **http://localhost:8080** en Chrome o Edge. Mantener esa terminal abierta durante el ensayo y compartir esa pestaña o ventana en Meet. El servidor web escucha solo en tu equipo; tus compañeros ven la aplicación mediante la pantalla compartida.
+
+Credenciales: **demo@test.com / 123456**. Crear un pedido nuevo, abrirlo desde Mis Pedidos y usar Avanzar al siguiente punto. El mapa de Trujillo se muestra directamente con OpenStreetMap.
+
+La compilación solo hace falta la primera vez o cuando cambie el código Flutter. Para volver a presentar:
+
+```bash
+docker compose up -d
+(cd backend && npm run demo:web)
+```
+
+### Opción de desarrollo con Chrome
+
+Con la API de Docker iniciada, en otra terminal:
+
+```bash
 cd seguimiento_de_pedidos_app
 flutter pub get
-flutter devices
-flutter run -d ID_DEL_DISPOSITIVO_ANDROID
+flutter run -d chrome --web-port=8080
 ```
 
-Selecciona un Android conectado; el repositorio no crea un emulador automáticamente. Sin clave se usa una vista esquemática con los mismos controles y persistencia. Google Maps está habilitado únicamente para Android en esta entrega. En Chrome puede ensayarse la vista esquemática con `flutter run -d chrome`; iOS y escritorio no están validados.
+Usar una sola de las dos opciones: ambas utilizan el puerto 8080. Para cambiar el puerto del servidor compilado: `WEB_PORT=8081 npm run demo:web` dentro de la carpeta backend.
 
-Credenciales de demostración: **demo@test.com / 123456**. Si ya existe un volumen anterior, se conserva su usuario y dirección. Los nuevos envíos de demostración muestran un destino ficticio en Trujillo, independiente de la dirección del perfil.
+### Conexión y requisitos
 
-La API publica el puerto **3000**. PostgreSQL publica **55432** en el host para evitar el conflicto observado con PostgreSQL local en Windows; dentro de Docker sigue usando **5432**. Puedes cambiar el puerto del host con `POSTGRES_PORT=55433 docker compose up -d`.
+La API está en el puerto **3000** y PostgreSQL en **55432** del host; dentro de Docker la base sigue en 5432. El puerto del host es configurable con `POSTGRES_PORT=55433 docker compose up -d`.
 
-## Activar Google Maps en Android
+En web, la aplicación usa el mismo nombre de host de la página y el puerto 3000 para la API. Se puede cambiar con `--dart-define=API_BASE_URL=http://localhost:3000` al compilar o ejecutar Flutter. Para Android Emulator se conserva `10.0.2.2:3000`; un teléfono físico requiere la IP LAN del PC. [demo.example.json](seguimiento_de_pedidos_app/config/demo.example.json) contiene una configuración opcional para web; ya no contiene claves de mapas.
 
-1. Crear o elegir un proyecto de Google Cloud, habilitar facturación y **Maps SDK for Android**, y crear una clave. Revisar las tarifas vigentes de la cuenta.
-2. Restringir la clave al SDK Android y al paquete `com.example.seguimiento_de_pedidos_app`, incluyendo el SHA-1 del certificado usado para firmar la aplicación.
-3. Desde la carpeta Flutter, copiar la configuración y editar únicamente la copia local:
+OpenStreetMap requiere Internet para cargar las calles. Los controles de simulación requieren la API local y PostgreSQL. En ventanas de al menos 900 px, el mapa y los controles se colocan lado a lado para compartir pantalla. Si las teselas del mapa fallan, **Vista esquemática** permite continuar con el mismo recorrido y los mismos pedidos.
 
-```bash
-cp config/demo.example.json config/demo.local.json
-```
+Si ya existe un volumen anterior, se conserva su usuario y dirección. Los nuevos envíos de demostración muestran un destino ficticio de Trujillo, independiente del perfil.
 
-Completar `GOOGLE_MAPS_API_KEY` con la clave. El archivo local está excluido de Git. Para un teléfono físico, cambiar `API_BASE_URL` a `http://IP_LAN_DEL_PC:3000`; el teléfono y el PC deben estar en la misma red y el firewall debe permitir el puerto. En Android Emulator se usa `http://10.0.2.2:3000`.
+## OpenStreetMap y atribución
 
-```bash
-flutter run -d ID_DEL_DISPOSITIVO_ANDROID --dart-define-from-file=config/demo.local.json
-```
+El widget usa [flutter_map](https://docs.fleaflet.dev/) con el servidor estándar de OpenStreetMap por HTTPS. No hay claves, SDK de Google ni configuración de facturación. Se mantiene visible la atribución enlazada a [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
 
-El mismo parámetro configura la selección del mapa en Dart y la clave del manifiesto Android mediante Gradle. Requiere reconstruir la aplicación después de modificarlo; un hot reload no actualiza el manifiesto. Android mínimo: API 24. La clave móvil forma parte del APK: la exclusión de Git no sustituye las restricciones de Google Cloud.
-
-Para obtener el SHA-1 desde Git Bash, con Java disponible:
-
-```bash
-keytool -list -v -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android
-```
-
-El certificado de depuración se genera al compilar Android. La clave de Google Cloud y el acceso autorizado a la cuenta deben aportarse localmente; no se incluyen credenciales en el proyecto.
-
-Documentación oficial: [paquete Google Maps Flutter](https://pub.dev/packages/google_maps_flutter), [configuración de Google Maps](https://developers.google.com/maps/flutter-package/config).
+La prueba académica hace consultas interactivas de las áreas visibles; no descarga mapas completos ni realiza precarga masiva. La caché HTTP del navegador y la caché predeterminada de flutter_map en plataformas nativas se mantienen habilitadas. El servicio público tiene disponibilidad de mejor esfuerzo y debe utilizarse según su [política de teselas](https://operations.osmfoundation.org/policies/tiles/).
 
 ## Uso y alcance de la simulación
 
@@ -55,7 +61,7 @@ Documentación oficial: [paquete Google Maps Flutter](https://pub.dev/packages/g
 2. Abrir **Mis Pedidos** y tocar el pedido nuevo.
 3. Pulsar **Avanzar al siguiente punto**: el servidor confirma un nodo y el marcador realiza una transición visual de dos segundos. Durante la operación los controles se bloquean.
 4. Repetir hasta llegar al destino. El estado pasa por pendiente, en camino, en reparto y entregado; la tarjeta también se actualiza al regresar.
-5. **Reiniciar simulación** crea otro ensayo desde el origen. No realiza otra compra ni altera inventario, artículos o total. Los eventos anteriores permanecen en PostgreSQL; la pantalla muestra el ensayo actual.
+5. **Reiniciar prueba** crea otro ensayo desde el origen. No realiza otra compra ni altera inventario, artículos o total. Los eventos anteriores permanecen en PostgreSQL; la pantalla muestra el ensayo actual.
 
 Cada pedido tiene posición, versión e historial independientes aunque todos reutilizan la misma ruta. **Actualizar seguimiento** recupera el estado confirmado, también después de cerrar la aplicación y volver a iniciar sesión. No hay actualización automática entre dispositivos: usar ese botón o reabrir la pantalla.
 
@@ -69,7 +75,7 @@ La definición está en [trujillo-route.json](backend/src/data/trujillo-route.js
 
 **Las coordenadas son aproximadas y la línea entre nodos es ilustrativa.** La interpolación puede cruzar manzanas: no es una ruta vial validada ni una estimación de tiempo de entrega. Los nodos son referencias académicas; no representan ubicaciones operativas de un courier. Antes de exponer, comprobar visualmente el área de los marcadores. Cambiar el identificador de ruta si se modifica su significado; los pedidos con una ruta desconocida no se reinterpretan.
 
-Si Google Maps no carga por clave, red o servicios de Google, usar **Vista esquemática**. La simulación siempre necesita conexión con la API; la vista alternativa no convierte la aplicación en una aplicación sin conexión.
+Si OpenStreetMap no carga por un problema de red, usar **Vista esquemática**. La simulación siempre necesita conexión con la API; la vista alternativa no convierte la aplicación en una aplicación sin conexión.
 
 ## Arquitectura Express
 
@@ -132,7 +138,8 @@ Desde la raíz:
 (cd seguimiento_de_pedidos_app && flutter analyze && flutter test)
 (cd backend && npm test)
 (cd backend && TEST_DATABASE_URL=postgresql://pedidoapp:pedidoapp123@127.0.0.1:55432/pedidoapp npm run test:integration)
-(cd seguimiento_de_pedidos_app && flutter build apk --debug)
+(cd seguimiento_de_pedidos_app && flutter test --platform chrome)
+(cd seguimiento_de_pedidos_app && flutter build web)
 ```
 
 Sin `TEST_DATABASE_URL`, la integración se omite y las pruebas unitarias se ejecutan normalmente. La integración crea una base temporal con nombre propio, carga datos y migraciones, ejecuta peticiones HTTP y elimina exclusivamente esa base al terminar. Necesita un usuario con permiso para crear bases. No usa pedidos de la demostración ni modifica el inventario de la base principal.
@@ -150,8 +157,8 @@ Guion de exposición de aproximadamente cinco minutos:
 | 7 | Volver al listado | La tarjeta indica entregado |
 | 8 | Reiniciar el primero | Origen, nueva ejecución, compra e inventario intactos |
 
-Ensayo técnico adicional: doble pulsación, pérdida de red/API, recuperación con Actualizar, acceso con otro usuario y mapa sin clave. Las pruebas automatizadas cubren transiciones, concurrencia, aislamiento, entrega, reinicio, permisos y recuperación de interfaz. La visualización del mapa de Google requiere una prueba manual final en Android con una clave válida y servicios de Google disponibles.
+Ensayo técnico adicional: doble pulsación, pérdida de red/API, recuperación con Actualizar, acceso con otro usuario y mapa sin conexión a Internet. Las pruebas automatizadas cubren transiciones, concurrencia, aislamiento, entrega, reinicio, permisos y recuperación de interfaz. Las pruebas del mapa se ejecutan sin descargar teselas externas; verificar visualmente las calles y el avance del marcador antes de compartir pantalla. En esta sesión el ejecutor de pruebas de Chrome quedó detenido durante el arranque y se canceló; no se considera una comprobación visual aprobada. La compilación web, el servidor local, CORS y la disponibilidad de las teselas se comprueban por separado.
 
 Las dependencias Flutter se ajustaron a Dart 3.13.5, incluido en Flutter 3.47.6 del entorno, y los archivos de bloqueo se conservan para instalaciones repetibles.
 
-En Windows se deshabilitó la compilación incremental de Kotlin para evitar el fallo de caché entre el proyecto en `E:` y la caché Pub en `C:`. La APK de depuración se genera en [app-debug.apk](seguimiento_de_pedidos_app/build/app/outputs/flutter-apk/app-debug.apk).
+En Windows se deshabilitó la compilación incremental de Kotlin para evitar el fallo de caché entre el proyecto en `E:` y la caché Pub en `C:`. La salida para navegador se genera en [build/web/](seguimiento_de_pedidos_app/build/web/).

@@ -15,7 +15,7 @@ async function recordNode(client, orderId, runId, index) {
   const node = route.nodes[index];
   await client.query(
     'INSERT INTO tracking_events (order_id,status,description,location,simulation_run_id,node_index) VALUES ($1,$2,$3,$4,$5,$6)',
-    [orderId, node.status, index === 0 ? 'Simulación iniciada. Pedido pendiente de despacho.' : 'Pedido simulado en: ' + node.name, node.name, runId, index]
+    [orderId, node.status, index === 0 ? 'Prueba académica iniciada. Pedido pendiente de despacho.' : 'Pedido en punto de prueba: ' + node.name, node.name, runId, index]
   );
 }
 async function initialize(client, orderId) {
@@ -31,7 +31,7 @@ async function mutate(pool, orderId, userId, action, expectedVersion) {
     if (!owned.rows.length) throw fail(404, 'Pedido no encontrado');
     const result = await client.query('SELECT * FROM order_simulations WHERE order_id=$1 FOR UPDATE', [orderId]);
     const current = result.rows[0];
-    if (!current) throw fail(409, 'Este pedido anterior no tiene ruta simulada. Crea un pedido nuevo.');
+    if (!current) throw fail(409, 'Este pedido anterior no tiene una ruta de prueba. Crea un pedido nuevo.');
     if (current.route_id !== route.id) throw fail(409, 'La ruta de este pedido no está disponible');
     checkVersion(current.version, expectedVersion);
     const index = action === 'reset' ? 0 : nextIndex(current.current_node_index);

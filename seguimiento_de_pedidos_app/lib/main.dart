@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'services/app_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
@@ -13,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PedidoApp',
+      title: 'Trackos · Demo de seguimiento',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),

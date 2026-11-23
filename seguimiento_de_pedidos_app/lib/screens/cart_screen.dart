@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/app_service.dart';
 import '../models/cart_item.dart';
 
@@ -32,7 +33,8 @@ class _CartScreenState extends State<CartScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar pedido'),
         content: Text(
-            '¿Deseas realizar el pedido por \$${AppService().cartTotal.toStringAsFixed(2)}?'),
+          '¿Deseas realizar el pedido por \$${AppService().cartTotal.toStringAsFixed(2)}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -42,23 +44,31 @@ class _CartScreenState extends State<CartScreen> {
             onPressed: () {
               Navigator.of(ctx).pop();
               () async {
-              try {
-              final order = await AppService().placeOrder();
-              if (!mounted) return;
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('¡Pedido ${order.id} realizado con éxito!'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              // Navigate back and open orders tab
-              widget.onOrderPlaced?.call();
-              Navigator.of(context).pop();
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-              }
+                try {
+                  final order = await AppService().placeOrder();
+                  if (!mounted) return;
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('¡Pedido ${order.id} realizado con éxito!'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  // Navigate back and open orders tab
+                  widget.onOrderPlaced?.call();
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          e.toString().replaceFirst('Exception: ', ''),
+                        ),
+                      ),
+                    );
+                  }
+                }
               }();
             },
             child: const Text('Confirmar'),
@@ -80,7 +90,9 @@ class _CartScreenState extends State<CartScreen> {
           if (cart.isNotEmpty)
             TextButton.icon(
               onPressed: () {
-                AppService().clearCart().then((_) { if (mounted) setState(() {}); });
+                AppService().clearCart().then((_) {
+                  if (mounted) setState(() {});
+                });
                 setState(() {});
               },
               icon: const Icon(Icons.delete_sweep, size: 20),
@@ -93,15 +105,19 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart_outlined,
-                      size: 90, color: Colors.grey[300]),
+                  Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 90,
+                    color: Colors.grey[300],
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Tu carrito está vacío',
                     style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500),
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -127,7 +143,9 @@ class _CartScreenState extends State<CartScreen> {
                       final item = cart[i];
                       return Card(
                         margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Row(
@@ -136,12 +154,16 @@ class _CartScreenState extends State<CartScreen> {
                                 width: 56,
                                 height: 56,
                                 decoration: BoxDecoration(
-                                  color:
-                                      item.product.color.withValues(alpha: 0.15),
+                                  color: item.product.color.withValues(
+                                    alpha: 0.15,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Icon(item.product.icon,
-                                    color: item.product.color, size: 30),
+                                child: Icon(
+                                  item.product.icon,
+                                  color: item.product.color,
+                                  size: 30,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -151,16 +173,18 @@ class _CartScreenState extends State<CartScreen> {
                                     Text(
                                       item.product.name,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
                                       '\$${item.product.price.toStringAsFixed(2)} c/u',
                                       style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12),
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -193,8 +217,9 @@ class _CartScreenState extends State<CartScreen> {
                                       Text(
                                         '${item.quantity}',
                                         style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                       SizedBox(
                                         width: 28,
@@ -209,8 +234,11 @@ class _CartScreenState extends State<CartScreen> {
                                     ],
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline,
-                                        color: Colors.red, size: 20),
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                      size: 20,
+                                    ),
                                     onPressed: () => _remove(item),
                                   ),
                                 ],
@@ -227,9 +255,10 @@ class _CartScreenState extends State<CartScreen> {
                     color: Theme.of(context).colorScheme.surface,
                     boxShadow: const [
                       BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: Offset(0, -2))
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, -2),
+                      ),
                     ],
                   ),
                   padding: const EdgeInsets.all(20),
@@ -238,9 +267,13 @@ class _CartScreenState extends State<CartScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total:',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Total:',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           Text(
                             '\$${total.toStringAsFixed(2)}',
                             style: TextStyle(
@@ -258,8 +291,10 @@ class _CartScreenState extends State<CartScreen> {
                         child: FilledButton.icon(
                           onPressed: cart.isEmpty ? null : _placeOrder,
                           icon: const Icon(Icons.check_circle_outline),
-                          label: const Text('Realizar Pedido',
-                              style: TextStyle(fontSize: 16)),
+                          label: const Text(
+                            'Realizar Pedido',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                       ),
                     ],

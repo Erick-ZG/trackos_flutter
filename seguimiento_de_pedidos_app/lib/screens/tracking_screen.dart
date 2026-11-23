@@ -10,7 +10,13 @@ import '../widgets/tracking_map.dart';
 class TrackingScreen extends StatefulWidget {
   final String orderId;
   final TrackingRepository? repository;
-  const TrackingScreen({super.key, required this.orderId, this.repository});
+  final bool loadMapTiles;
+  const TrackingScreen({
+    super.key,
+    required this.orderId,
+    this.repository,
+    this.loadMapTiles = true,
+  });
   @override
   State<TrackingScreen> createState() => _TrackingScreenState();
 }
@@ -112,7 +118,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
               children: [
                 const Chip(
                   avatar: Icon(Icons.science_outlined),
-                  label: Text('Simulación académica'),
+                  label: Text('Prueba académica'),
                 ),
                 Text(
                   widget.orderId,
@@ -143,50 +149,76 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (sim != null) ...[
-                    TrackingMap(
-                      simulation: sim,
-                      onAnimationFinished: () {
-                        _animationTimeout?.cancel();
-                        if (mounted) setState(() => _animating = false);
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final map = TrackingMap(
+                          simulation: sim,
+                          loadTiles: widget.loadMapTiles,
+                          onAnimationFinished: () {
+                            _animationTimeout?.cancel();
+                            if (mounted) setState(() => _animating = false);
+                          },
+                        );
+                        final controls = Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              sim.routeName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(sim.notice),
+                            const SizedBox(height: 12),
+                            LinearProgressIndicator(value: sim.progress),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tramos completados: ${sim.currentNodeIndex} de ${sim.nodes.length - 1}',
+                            ),
+                            Text('Ubicación: ${sim.currentNode.name}'),
+                            if (!sim.delivered)
+                              Text(
+                                'Siguiente: ${sim.nodes[sim.currentNodeIndex + 1].name}',
+                              ),
+                            const SizedBox(height: 12),
+                            FilledButton.icon(
+                              onPressed: canOperate && !sim.delivered
+                                  ? () => _mutate()
+                                  : null,
+                              icon: const Icon(Icons.local_shipping_outlined),
+                              label: Text(
+                                sim.delivered
+                                    ? 'Entrega completada'
+                                    : 'Avanzar al siguiente punto',
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: canOperate
+                                  ? () => _mutate(reset: true)
+                                  : null,
+                              icon: const Icon(Icons.restart_alt),
+                              label: const Text('Reiniciar prueba'),
+                            ),
+                            if (!sim.enabled)
+                              const Text(
+                                'Los controles de demostración están deshabilitados en el servidor.',
+                              ),
+                          ],
+                        );
+                        if (constraints.maxWidth >= 900) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 3, child: map),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 2, child: controls),
+                            ],
+                          );
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [map, controls],
+                        );
                       },
                     ),
-                    Text(
-                      sim.routeName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(sim.notice),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(value: sim.progress),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tramos completados: ${sim.currentNodeIndex} de ${sim.nodes.length - 1}',
-                    ),
-                    Text('Ubicación: ${sim.currentNode.name}'),
-                    if (!sim.delivered)
-                      Text(
-                        'Siguiente: ${sim.nodes[sim.currentNodeIndex + 1].name}',
-                      ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: canOperate && !sim.delivered
-                          ? () => _mutate()
-                          : null,
-                      icon: const Icon(Icons.local_shipping_outlined),
-                      label: Text(
-                        sim.delivered
-                            ? 'Entrega completada'
-                            : 'Avanzar al siguiente punto',
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: canOperate ? () => _mutate(reset: true) : null,
-                      icon: const Icon(Icons.restart_alt),
-                      label: const Text('Reiniciar simulación'),
-                    ),
-                    if (!sim.enabled)
-                      const Text(
-                        'Los controles de demostración están deshabilitados en el servidor.',
-                      ),
                     const Divider(height: 24),
                     for (var i = 0; i < sim.nodes.length; i++)
                       ListTile(
@@ -208,7 +240,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Text(
-                        'Este pedido no tiene ruta simulada. Crea un pedido nuevo con el modo demostración habilitado.',
+                        'Este pedido no tiene una ruta de prueba. Crea un pedido nuevo con el modo de prueba académica habilitado.',
                       ),
                     ),
                   const Divider(height: 24),
@@ -242,7 +274,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   if (data.shipment['delivered_at'] != null)
                     const ListTile(
                       leading: Icon(Icons.check_circle, color: Colors.green),
-                      title: Text('Entrega simulada confirmada'),
+                      title: Text('Entrega de prueba confirmada'),
                     ),
                   const Divider(height: 24),
                   Text(

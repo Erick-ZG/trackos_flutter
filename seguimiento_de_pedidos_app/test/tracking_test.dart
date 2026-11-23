@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:seguimiento_de_pedidos_app/models/tracking.dart';
 import 'package:seguimiento_de_pedidos_app/screens/tracking_screen.dart';
@@ -67,7 +68,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       MaterialApp(
-        home: TrackingScreen(orderId: 'ORD-TEST', repository: repo),
+        home: TrackingScreen(
+          orderId: 'ORD-TEST',
+          repository: repo,
+          loadMapTiles: false,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -108,8 +113,8 @@ void main() {
           .onPressed,
       isNull,
     );
-    await tester.ensureVisible(find.text('Reiniciar simulación'));
-    await tester.tap(find.text('Reiniciar simulación'));
+    await tester.ensureVisible(find.text('Reiniciar prueba'));
+    await tester.tap(find.text('Reiniciar prueba'));
     await tester.pumpAndSettle();
     expect(repo.index, 0);
     expect(find.text('Tramos completados: 0 de 4'), findsOneWidget);
@@ -156,15 +161,15 @@ void main() {
   ) async {
     final repo = FakeTracking();
     await open(tester, repo);
-    tester.view.physicalSize = const Size(430, 700);
+    tester.view.physicalSize = const Size(430, 900);
     await tester.pumpAndSettle();
     final advance = find.text('Avanzar al siguiente punto');
-    await tester.scrollUntilVisible(advance, 180);
+    await tester.ensureVisible(advance);
     await tester.tap(advance);
     await tester.pump();
-    await tester.drag(find.byType(ListView), const Offset(0, -1600));
+    await tester.dragFrom(const Offset(425, 750), const Offset(0, -1600));
     await tester.pump(const Duration(seconds: 3));
-    await tester.scrollUntilVisible(advance, -180);
+    await tester.ensureVisible(advance);
     await tester.pumpAndSettle();
     expect(repo.index, 1);
     expect(
@@ -175,6 +180,25 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('En escritorio el mapa y el avance quedan visibles lado a lado', (
+    tester,
+  ) async {
+    final repo = FakeTracking();
+    await open(tester, repo);
+    tester.view.physicalSize = const Size(1280, 720);
+    await tester.pumpAndSettle();
+    final map = tester.getRect(find.byType(FlutterMap));
+    final advance = tester.getRect(
+      find.widgetWithText(FilledButton, 'Avanzar al siguiente punto'),
+    );
+    expect(advance.left, greaterThan(map.right));
+    expect(advance.bottom, lessThan(720));
+    expect(map.bottom, lessThan(720));
+    await tester.tap(find.text('Avanzar al siguiente punto'));
+    await tester.pumpAndSettle();
+    expect(repo.index, 1);
   });
 
   test('Rechaza un índice de ruta inválido al decodificar', () {

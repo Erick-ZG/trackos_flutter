@@ -7,7 +7,8 @@
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",
     "test": "node --test",
-    "test:integration": "node --env-file-if-exists=.env --test test/integration.test.js"
+    "test:integration": "node --env-file-if-exists=.env --test test/integration.test.js",
+    "demo:web": "node scripts/serve-web.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
