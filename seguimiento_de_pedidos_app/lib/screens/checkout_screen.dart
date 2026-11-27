@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/order.dart';
 import '../services/app_service.dart';
+import '../widgets/phone_requirement.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -29,8 +30,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final userAddr = AppService().currentUser?.address.trim() ?? '';
     _addrCtrl.text =
         userAddr.isNotEmpty && !userAddr.toLowerCase().contains('ficticio')
-            ? userAddr
-            : 'Mi ubicación actual';
+        ? userAddr
+        : 'Mi ubicación actual';
     _detectMyLocation();
   }
 
@@ -65,8 +66,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           permission == LocationPermission.deniedForever) {
         setState(() {
           _locating = false;
-          _locationNote =
-              'Permiso de ubicación denegado. Toca el mapa para elegir tu punto.';
+          _locationNote = 'Permiso de ubicación denegado. Toca el mapa para elegir tu punto.';
         });
         return;
       }
@@ -89,8 +89,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() {
         _locating = false;
-        _locationNote =
-            'No se pudo obtener tu GPS automático. Toca el mapa para fijar tu punto.';
+        _locationNote = 'No se pudo obtener tu GPS automático. Toca el mapa para fijar tu punto.';
       });
     }
   }
@@ -99,6 +98,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
+      if (!await ensureContactPhone(context) || !mounted) return;
       final Order order = await AppService().placeOrder(
         deliveryAddress: _addrCtrl.text.trim().isEmpty
             ? 'Punto en mapa (${_dropoff.latitude.toStringAsFixed(5)}, ${_dropoff.longitude.toStringAsFixed(5)})'
@@ -110,7 +110,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       Navigator.of(context).pop(order);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
@@ -118,6 +117,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -241,8 +242,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   tooltip: _mapExpanded ? 'Reducir mapa' : 'Ampliar mapa',
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF0F172A),
-                  onPressed: () =>
-                      setState(() => _mapExpanded = !_mapExpanded),
+                  onPressed: () => setState(() => _mapExpanded = !_mapExpanded),
                   child: Icon(
                     _mapExpanded ? Icons.fullscreen_exit : Icons.fullscreen,
                   ),
@@ -285,8 +285,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _locationNote ??
-                        'Toca cualquier punto del mapa para mover el puntero rojo.',
+                    _locationNote ?? 'Toca cualquier punto del mapa para mover el puntero rojo.',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -296,10 +295,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Coordenadas: ${_dropoff.latitude.toStringAsFixed(5)}, ${_dropoff.longitude.toStringAsFixed(5)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
                 ],
               ),
@@ -353,9 +349,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Confirmar ubicación de entrega'),
-      ),
+      appBar: AppBar(title: const Text('Confirmar ubicación de entrega')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1180),

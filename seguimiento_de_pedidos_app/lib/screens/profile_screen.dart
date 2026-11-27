@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
-import '../services/app_service.dart';
-import 'login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../services/app_service.dart';
+import '../utils/phone_utils.dart';
+import 'login_screen.dart';
+import 'phone_edit_screen.dart';
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _editPhone() async {
+    final saved = await PhoneEditScreen.open(context);
+    if (mounted && saved) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +26,7 @@ class ProfileScreen extends StatelessWidget {
     }
 
     final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
+    final phone = PhoneUtils.normalize(user.phone) ?? '';
     final colorScheme = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
@@ -26,36 +40,54 @@ class ProfileScreen extends StatelessWidget {
             child: Text(
               initial,
               style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary),
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             user.name,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
+            style: Theme.of(context).textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
-          Text(
-            user.email,
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          Text(user.email, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(height: 28),
           _InfoCard(
             children: [
-              _InfoRow(icon: Icons.person_outline, label: 'Nombre', value: user.name),
+              _InfoRow(
+                icon: Icons.person_outline,
+                label: 'Nombre',
+                value: user.name,
+              ),
               const Divider(height: 1),
-              _InfoRow(icon: Icons.email_outlined, label: 'Email', value: user.email),
-              if (user.phone.isNotEmpty) ...[
-                const Divider(height: 1),
-                _InfoRow(icon: Icons.phone_outlined, label: 'Teléfono', value: user.phone),
-              ],
+              _InfoRow(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: user.email,
+              ),
+              const Divider(height: 1),
+              _InfoRow(
+                icon: Icons.phone_outlined,
+                label: 'Teléfono',
+                value: phone.isEmpty ? 'No registrado' : phone,
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _editPhone,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Editar teléfono'),
+                ),
+              ),
               if (user.address.isNotEmpty) ...[
                 const Divider(height: 1),
-                _InfoRow(icon: Icons.home_outlined, label: 'Dirección', value: user.address),
+                _InfoRow(
+                  icon: Icons.home_outlined,
+                  label: 'Dirección',
+                  value: user.address,
+                ),
               ],
             ],
           ),
@@ -80,21 +112,29 @@ class ProfileScreen extends StatelessWidget {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Cerrar sesión'),
-                    content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+                    content: const Text(
+                      '¿Estás seguro que deseas cerrar sesión?',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(ctx).pop(),
                         child: const Text('Cancelar'),
                       ),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
                         onPressed: () async {
                           final rootNavigator = Navigator.of(context);
                           final dialogNavigator = Navigator.of(ctx);
-                          try { await AppService().logout(); } catch (_) {}
+                          try {
+                            await AppService().logout();
+                          } catch (_) {}
                           dialogNavigator.pop();
                           rootNavigator.pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
                             (_) => false,
                           );
                         },
@@ -105,7 +145,10 @@ class ProfileScreen extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Cerrar Sesión', style: TextStyle(fontSize: 16)),
+              label: const Text(
+                'Cerrar Sesión',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -160,7 +203,10 @@ class _InfoRow extends StatelessWidget {
                 ),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),

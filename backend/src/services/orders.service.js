@@ -3,6 +3,7 @@ const { randomUUID } = require('node:crypto');
 const simulation = require('./simulation.service');
 const { simulationEnabled } = require('../config/env');
 const wsHub = require('../realtime/wsHub');
+const { normalizePhone } = require('../utils/phone');
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -44,7 +45,12 @@ exports.create = async (user, payload = {}) => {
   try {
     await client.query('BEGIN');
     // Serialize purchases of the same account, including an accidental double submit.
-    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [user.user_id]);
+    const account = (
+      await client.query('SELECT phone FROM users WHERE id = $1 FOR UPDATE', [user.user_id])
+    ).rows[0];
+    if (!account || !normalizePhone(account.phone)) {
+      throw simulation.fail(400, 'Completa un teléfono válido en Perfil antes de confirmar tu pedido');
+    }
     const cart = (
       await client.query(
         `SELECT c.quantity, p.id, p.name, p.price, p.stock

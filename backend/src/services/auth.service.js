@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('node:crypto');
 const { fail } = require('./simulation.service');
+const { normalizePhone } = require('../utils/phone');
 
 function credentials(email, password) {
   if (
@@ -20,7 +21,7 @@ function publicUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
-    phone: user.phone,
+    phone: normalizePhone(user.phone) || '',
     address: user.address,
     role: user.role || 'customer',
     branch_id: user.branch_id || null,
@@ -34,6 +35,10 @@ exports.register = async ({ name, email, password, phone = '', address = '' }) =
   if (typeof name !== 'string' || !name.trim() || typeof phone !== 'string' || typeof address !== 'string') {
     throw fail(400, 'Datos de usuario inválidos');
   }
+  const normalizedPhone = normalizePhone(phone);
+  if (normalizedPhone === null) {
+    throw fail(400, 'Ingresa un celular peruano de 9 dígitos que comience por 9');
+  }
   const hash = await bcrypt.hash(password, 10);
   const client = await pool.connect();
   try {
@@ -42,7 +47,7 @@ exports.register = async ({ name, email, password, phone = '', address = '' }) =
       await client.query(
         `INSERT INTO users (id, name, email, password, phone, address, role)
          VALUES ($1, $2, $3, $4, $5, $6, 'customer') RETURNING *`,
-        [randomUUID(), name.trim(), email.trim().toLowerCase(), hash, phone, address]
+        [randomUUID(), name.trim(), email.trim().toLowerCase(), hash, normalizedPhone, address]
       )
     ).rows[0];
     const token = randomUUID();
@@ -78,4 +83,20 @@ exports.login = async ({ email, password }) => {
 };
 
 exports.logout = (token) => pool.query('DELETE FROM sessions WHERE token=$1', [token]);
+
+exports.updatePhone = async (user, phone) => {
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) {
+    throw fail(400, 'Ingresa un celular peruano de 9 dígitos que comience por 9');
+  }
+
+  const result = await pool.query(
+    'UPDATE users SET phone = $1 WHERE id = $2 RETURNING id, phone',
+    [normalizedPhone, user.user_id]
+  );
+  if (!result.rows.length) throw fail(404, 'Usuario no encontrado');
+
+  return publicUser({ ...user, ...result.rows[0] });
+};
+
 exports.publicUser = publicUser;

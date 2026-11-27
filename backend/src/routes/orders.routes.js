@@ -1,9 +1,11 @@
 const router = require('express').Router();
 const orders = require('../controllers/orders.controller');
 const tracking = require('../controllers/tracking.controller');
+const contact = require('../controllers/order-contact.controller');
 router.use(require('../middleware/auth'));
 router.get('/', orders.list);
 router.post('/', orders.create);
+router.get('/:id/contact', contact.get);
 router.get('/:id/tracking', tracking.get);
 router.post('/:id/simulation/advance', tracking.advance);
 router.post('/:id/simulation/reset', tracking.reset);

@@ -9,6 +9,8 @@ import 'package:latlong2/latlong.dart';
 import '../models/order.dart';
 import '../services/app_service.dart';
 import '../widgets/order_chat_sheet.dart';
+import '../widgets/order_contact_button.dart';
+import '../widgets/phone_requirement.dart';
 
 class CourierDashboardScreen extends StatefulWidget {
   const CourierDashboardScreen({super.key});
@@ -66,6 +68,7 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
   }
 
   Future<void> _runAction(String orderId, Future<void> Function() fn) async {
+    if (_busyOrderId != null) return;
     setState(() => _busyOrderId = orderId);
     try {
       await fn();
@@ -84,14 +87,12 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
   Future<void> _moveStepTowardDelivery(Order order) async {
     final curLat = order.courierLat ?? order.pickupLat ?? -8.1205;
     final curLng = order.courierLng ?? order.pickupLng ?? -79.0355;
-    final targetLat =
-        order.rawStatus == 'ready_for_pickup'
-            ? (order.pickupLat ?? -8.1205)
-            : (order.deliveryLat ?? -8.1065);
-    final targetLng =
-        order.rawStatus == 'ready_for_pickup'
-            ? (order.pickupLng ?? -79.0355)
-            : (order.deliveryLng ?? -79.0205);
+    final targetLat = order.rawStatus == 'ready_for_pickup'
+        ? (order.pickupLat ?? -8.1205)
+        : (order.deliveryLat ?? -8.1065);
+    final targetLng = order.rawStatus == 'ready_for_pickup'
+        ? (order.pickupLng ?? -79.0355)
+        : (order.deliveryLng ?? -79.0205);
 
     final nextLat = curLat + (targetLat - curLat) * 0.35;
     final nextLng = curLng + (targetLng - curLng) * 0.35;
@@ -211,7 +212,9 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
                           ButtonSegment(
                             value: 0,
                             label: Text('Disponibles (${_available.length})'),
-                            icon: const Icon(Icons.notifications_active_outlined),
+                            icon: const Icon(
+                              Icons.notifications_active_outlined,
+                            ),
                           ),
                           ButtonSegment(
                             value: 1,
@@ -235,7 +238,9 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
                 )
               else if (_tabIndex == 0) ...[
                 if (_available.isEmpty)
-                  _emptyCard('No hay pedidos listos para recojo en este momento')
+                  _emptyCard(
+                    'No hay pedidos listos para recojo en este momento',
+                  )
                 else
                   for (final order in _available)
                     _buildAvailableCard(order, colorScheme),
@@ -243,7 +248,8 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
                 if (_mine.isEmpty)
                   _emptyCard('Aún no has aceptado ningún pedido')
                 else
-                  for (final order in _mine) _buildMyOrderCard(order, colorScheme),
+                  for (final order in _mine)
+                    _buildMyOrderCard(order, colorScheme),
               ],
             ],
           ),
@@ -262,7 +268,7 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
   );
 
   Widget _buildAvailableCard(Order order, ColorScheme colorScheme) {
-    final busy = _busyOrderId == order.id;
+    final busy = _busyOrderId != null;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -319,8 +325,10 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
               onPressed: busy
                   ? null
                   : () => _runAction(order.id, () async {
+                      if (!await ensureContactPhone(context) || !mounted)
+                        return;
                       await AppService().acceptOrder(order.id);
-                      setState(() => _tabIndex = 1);
+                      if (mounted) setState(() => _tabIndex = 1);
                     }),
               icon: const Icon(Icons.check_circle_outline),
               label: const Text('Aceptar pedido'),
@@ -391,7 +399,9 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('Recojo: ${order.branchName ?? 'Sede'} — ${order.pickupAddress}'),
+            Text(
+              'Recojo: ${order.branchName ?? 'Sede'} — ${order.pickupAddress}',
+            ),
             Text('Entrega: ${order.deliveryAddress}'),
             const SizedBox(height: 12),
             if (!isDelivered) ...[
@@ -540,10 +550,17 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF059669),
                     ),
-                    onPressed: busy ? null : () => _uploadProofAndDeliver(order),
+                    onPressed: busy
+                        ? null
+                        : () => _uploadProofAndDeliver(order),
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: const Text('Subir foto y Entregar'),
                   ),
+                OrderContactButton(
+                  orderId: order.id,
+                  label: 'Llamar al cliente',
+                  isClosed: isDelivered,
+                ),
                 OutlinedButton.icon(
                   onPressed: () => _openChat(order),
                   icon: const Icon(Icons.chat_bubble_outline),

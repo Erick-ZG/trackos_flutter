@@ -1,3 +1,5 @@
+import '../utils/phone_utils.dart';
+
 class User {
   final String id;
   final String name;
@@ -22,6 +24,19 @@ class User {
     this.branchName,
     this.branchAddress,
   });
+
+  factory User.fromJson(Map<String, dynamic> json) => User(
+    id: '${json['id'] ?? json['user_id']}',
+    name: json['name'] as String,
+    email: json['email'] as String,
+    password: '',
+    phone: PhoneUtils.normalize(json['phone'] as String?) ?? '',
+    address: json['address'] as String? ?? '',
+    role: json['role'] as String? ?? 'customer',
+    branchId: json['branch_id'] as String?,
+    branchName: json['branch_name'] as String?,
+    branchAddress: json['branch_address'] as String?,
+  );
 
   bool get isWorker => role == 'worker';
   bool get isCourier => role == 'courier';

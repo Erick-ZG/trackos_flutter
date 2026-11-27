@@ -8,9 +8,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/cart_item.dart';
 import '../models/order.dart';
+import '../models/order_contact.dart';
 import '../models/product.dart';
 import '../models/tracking.dart';
 import '../models/user.dart';
+import '../utils/phone_utils.dart';
 
 class AppService implements TrackingRepository {
   static final AppService _instance = AppService._internal();
@@ -141,6 +143,8 @@ class AppService implements TrackingRepository {
     String phone = '',
     String address = '',
   }) async {
+    final normalizedPhone = PhoneUtils.normalize(phone);
+    if (normalizedPhone == null) throw Exception(PhoneUtils.invalidMessage);
     final data = await _request(
       'POST',
       '/api/auth/register',
@@ -148,7 +152,7 @@ class AppService implements TrackingRepository {
         'name': name,
         'email': email,
         'password': password,
-        'phone': phone,
+        'phone': normalizedPhone,
         'address': address,
       },
     );
@@ -166,19 +170,42 @@ class AppService implements TrackingRepository {
 
   void _acceptSession(Map<String, dynamic> data) {
     _token = data['token'] as String;
-    final u = Map<String, dynamic>.from(data['user'] as Map);
-    currentUser = User(
-      id: '${u['user_id'] ?? u['id']}',
-      name: '${u['name']}',
-      email: '${u['email']}',
-      password: '',
-      phone: '${u['phone'] ?? ''}',
-      address: '${u['address'] ?? ''}',
-      role: '${u['role'] ?? 'customer'}',
-      branchId: u['branch_id']?.toString(),
-      branchName: u['branch_name']?.toString(),
-      branchAddress: u['branch_address']?.toString(),
+    _acceptUser(data);
+  }
+
+  User _acceptUser(Map<String, dynamic> data) {
+    final user = User.fromJson(Map<String, dynamic>.from(data['user'] as Map));
+    currentUser = user;
+    return user;
+  }
+
+  Future<User> refreshCurrentUser() async {
+    final data = await _request('GET', '/api/auth/me', authenticated: true);
+    return _acceptUser(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<User> updatePhone(String phone) async {
+    final normalizedPhone = PhoneUtils.normalize(phone);
+    if (normalizedPhone == null || normalizedPhone.isEmpty) {
+      throw Exception(PhoneUtils.invalidMessage);
+    }
+
+    final data = await _request(
+      'PATCH',
+      '/api/auth/me/phone',
+      body: {'phone': normalizedPhone},
+      authenticated: true,
     );
+    return _acceptUser(Map<String, dynamic>.from(data as Map));
+  }
+
+  Future<OrderContact> loadOrderContact(String orderId) async {
+    final data = await _request(
+      'GET',
+      '/api/orders/${Uri.encodeComponent(orderId)}/contact',
+      authenticated: true,
+    );
+    return OrderContact.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   Future<void> refreshStore() async {
@@ -239,6 +266,11 @@ class AppService implements TrackingRepository {
     double? deliveryLat,
     double? deliveryLng,
   }) async {
+    if (!PhoneUtils.isValid(currentUser?.phone)) {
+      throw Exception(
+        'Completa un teléfono válido en Perfil antes de confirmar tu pedido',
+      );
+    }
     final body = <String, dynamic>{};
     if (deliveryAddress != null && deliveryAddress.trim().isNotEmpty) {
       body['deliveryAddress'] = deliveryAddress.trim();
@@ -307,9 +339,11 @@ class AppService implements TrackingRepository {
 
   // Worker APIs
   Future<List<Order>> loadWorkerOrders() async {
-    final data =
-        await _request('GET', '/api/worker/orders', authenticated: true)
-            as List;
+    final data = await _request(
+      'GET',
+      '/api/worker/orders',
+      authenticated: true,
+    ) as List;
     return data.map((e) => _order(Map<String, dynamic>.from(e))).toList();
   }
 
@@ -330,10 +364,13 @@ class AppService implements TrackingRepository {
   }
 
   // Courier APIs
-  Future<({List<Order> available, List<Order> mine})> loadCourierOrders() async {
-    final data =
-        await _request('GET', '/api/courier/orders', authenticated: true)
-            as Map<String, dynamic>;
+  Future<({List<Order> available, List<Order> mine})>
+  loadCourierOrders() async {
+    final data = await _request(
+      'GET',
+      '/api/courier/orders',
+      authenticated: true,
+    ) as Map<String, dynamic>;
     final available = (data['available'] as List? ?? [])
         .map((e) => _order(Map<String, dynamic>.from(e)))
         .toList();
@@ -344,6 +381,11 @@ class AppService implements TrackingRepository {
   }
 
   Future<void> acceptOrder(String orderId, {double? lat, double? lng}) async {
+    if (!PhoneUtils.isValid(currentUser?.phone)) {
+      throw Exception(
+        'Completa un teléfono válido en Perfil antes de aceptar un pedido',
+      );
+    }
     await _request(
       'POST',
       '/api/courier/orders/$orderId/accept',
@@ -368,7 +410,11 @@ class AppService implements TrackingRepository {
     );
   }
 
-  Future<void> sendCourierLocation(String orderId, double lat, double lng) async {
+  Future<void> sendCourierLocation(
+    String orderId,
+    double lat,
+    double lng,
+  ) async {
     await _request(
       'POST',
       '/api/courier/orders/$orderId/location',
@@ -403,27 +449,23 @@ class AppService implements TrackingRepository {
 
   // Order Chat APIs
   Future<List<OrderMessage>> loadOrderMessages(String orderId) async {
-    final data =
-        await _request(
-              'GET',
-              '/api/orders/$orderId/messages',
-              authenticated: true,
-            )
-            as List;
+    final data = await _request(
+      'GET',
+      '/api/orders/$orderId/messages',
+      authenticated: true,
+    ) as List;
     return data
         .map((e) => OrderMessage.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
   Future<OrderMessage> sendOrderMessage(String orderId, String message) async {
-    final data =
-        await _request(
-              'POST',
-              '/api/orders/$orderId/messages',
-              body: {'message': message},
-              authenticated: true,
-            )
-            as Map<String, dynamic>;
+    final data = await _request(
+      'POST',
+      '/api/orders/$orderId/messages',
+      body: {'message': message},
+      authenticated: true,
+    ) as Map<String, dynamic>;
     return OrderMessage.fromJson(data);
   }
 
@@ -569,7 +611,6 @@ class AppService implements TrackingRepository {
       deliveryLat: (j['delivery_lat'] as num?)?.toDouble(),
       deliveryLng: (j['delivery_lng'] as num?)?.toDouble(),
       customerName: j['customer_name']?.toString(),
-      customerPhone: j['customer_phone']?.toString(),
       courierUserId: j['courier_user_id']?.toString(),
       courierName: j['courier_name']?.toString(),
       courierLat: (j['courier_lat'] as num?)?.toDouble(),

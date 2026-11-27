@@ -28,7 +28,7 @@ test('HTTP API with isolated PostgreSQL database', { skip: !process.env.TEST_DAT
       const res = await fetch(base + endpoint, { method, headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}) }, ...(body === undefined ? {} : {body:JSON.stringify(body)}) });
       return { status:res.status, body:await res.json() };
     };
-    const signup = email => request('POST','/api/auth/register',null,{name:'Demo',email,password:'123456',address:'Trujillo'});
+    const signup = email => request('POST','/api/auth/register',null,{name:'Demo',email,password:'123456',phone:'999000001',address:'Trujillo'});
     const user = (await signup('owner@test.local')).body;
     const other = (await signup('other@test.local')).body;
     const products = (await request('GET','/api/products')).body;

@@ -5,4 +5,5 @@ router.post('/register', controller.register);
 router.post('/login', controller.login);
 router.post('/logout', requireAuth, controller.logout);
 router.get('/me', requireAuth, controller.me);
+router.patch('/me/phone', requireAuth, controller.updatePhone);
 module.exports = router;

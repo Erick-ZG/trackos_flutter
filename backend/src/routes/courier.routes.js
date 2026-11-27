@@ -6,6 +6,7 @@ const requireAuth = require('../middleware/auth');
 const { requireRole } = require('../middleware/auth');
 const { fail } = require('../services/simulation.service');
 const wsHub = require('../realtime/wsHub');
+const { normalizePhone } = require('../utils/phone');
 
 router.use(requireAuth, requireRole('courier', 'admin'));
 
@@ -13,7 +14,7 @@ router.get('/orders', async (req, res, next) => {
   try {
     const available = (
       await pool.query(
-        `SELECT o.*, u.name AS customer_name, u.phone AS customer_phone, b.name AS branch_name
+        `SELECT o.*, u.name AS customer_name, b.name AS branch_name
          FROM orders o
          JOIN users u ON o.user_id = u.id
          LEFT JOIN branches b ON o.branch_id = b.id
@@ -24,7 +25,7 @@ router.get('/orders', async (req, res, next) => {
 
     const mine = (
       await pool.query(
-        `SELECT o.*, u.name AS customer_name, u.phone AS customer_phone, b.name AS branch_name
+        `SELECT o.*, u.name AS customer_name, b.name AS branch_name
          FROM orders o
          JOIN users u ON o.user_id = u.id
          LEFT JOIN branches b ON o.branch_id = b.id
@@ -50,6 +51,12 @@ router.post('/orders/:id/accept', async (req, res, next) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const account = (
+      await client.query('SELECT phone FROM users WHERE id = $1 FOR SHARE', [req.user.user_id])
+    ).rows[0];
+    if (!account || !normalizePhone(account.phone)) {
+      throw fail(400, 'Completa un teléfono válido en Perfil antes de aceptar un pedido');
+    }
     const row = (
       await client.query('SELECT * FROM orders WHERE id = $1 FOR UPDATE', [req.params.id])
     ).rows[0];

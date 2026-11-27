@@ -26,7 +26,17 @@ exports.logout = async (req, res, next) => {
 };
 
 exports.me = (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json({
     user: auth.publicUser({ ...req.user, id: req.user.user_id }),
   });
+};
+
+exports.updatePhone = async (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json({ user: await auth.updatePhone(req.user, req.body?.phone) });
+  } catch (err) {
+    next(err);
+  }
 };

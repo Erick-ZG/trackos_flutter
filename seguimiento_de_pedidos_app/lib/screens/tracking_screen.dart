@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/tracking.dart';
 import '../services/app_service.dart';
 import '../widgets/order_chat_sheet.dart';
+import '../widgets/order_contact_button.dart';
 import '../widgets/tracking_map.dart';
 
 class TrackingScreen extends StatefulWidget {
@@ -259,7 +260,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
                       if (hasRealtimeCoords) ...[
                         LayoutBuilder(
                           builder: (context, constraints) {
-                            final liveMap = _buildLiveMapCard(data, colorScheme);
+                            final liveMap = _buildLiveMapCard(
+                              data,
+                              colorScheme,
+                            );
                             final workflowCard = _buildWorkflowCard(
                               data,
                               colorScheme,
@@ -451,6 +455,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     ],
                   ),
                 ),
+                if (widget.repository == null &&
+                    AppService().currentUser?.isCustomer == true)
+                  OrderContactButton(
+                    orderId: widget.orderId,
+                    label: 'Llamar al repartidor',
+                    isClosed:
+                        data.status == 'delivered' ||
+                        data.status == 'cancelled' ||
+                        data.status == 'canceled',
+                  ),
                 if (data.courierName != null && widget.repository == null)
                   FilledButton.tonalIcon(
                     onPressed: () => _openChat(data),
@@ -460,10 +474,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 else
                   const Chip(
                     avatar: Icon(Icons.science_outlined, size: 16),
-                    label: Text(
-                      'Tiempo real',
-                      style: TextStyle(fontSize: 12),
-                    ),
+                    label: Text('Tiempo real', style: TextStyle(fontSize: 12)),
                     visualDensity: VisualDensity.compact,
                   ),
               ],
@@ -577,7 +588,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
                           width: 40,
                           height: 40,
                           child: Tooltip(
-                            message: 'Tu punto de entrega: ${data.deliveryAddress ?? ''}',
+                            message:
+                                'Tu punto de entrega: ${data.deliveryAddress ?? ''}',
                             child: const CircleAvatar(
                               backgroundColor: Color(0xFF059669),
                               child: Icon(
@@ -594,7 +606,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             width: 46,
                             height: 46,
                             child: Tooltip(
-                              message: '${data.courierName ?? 'Repartidor'} en vivo',
+                              message:
+                                  '${data.courierName ?? 'Repartidor'} en vivo',
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: colorScheme.primary,
@@ -623,8 +636,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
               spacing: 14,
               runSpacing: 6,
               children: [
-                _legendItem(const Color(0xFF2563EB), Icons.store, 'Punto de recojo'),
-                _legendItem(colorScheme.primary, Icons.delivery_dining, 'Motorizado en vivo'),
+                _legendItem(
+                  const Color(0xFF2563EB),
+                  Icons.store,
+                  'Punto de recojo',
+                ),
+                _legendItem(
+                  colorScheme.primary,
+                  Icons.delivery_dining,
+                  'Motorizado en vivo',
+                ),
                 _legendItem(const Color(0xFF059669), Icons.home, 'Tu entrega'),
               ],
             ),
@@ -639,7 +660,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
     children: [
       Icon(icon, size: 16, color: color),
       const SizedBox(width: 4),
-      Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      Text(
+        text,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      ),
     ],
   );
 
@@ -667,9 +691,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
           children: [
             Text(
               'Estado del pedido',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1008,21 +1031,15 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              'Repartidor: ${data.courierName ?? 'Por asignar'}',
-            ),
-            Text(
-              'Costo de delivery: \$${data.deliveryFee.toStringAsFixed(2)}',
-            ),
+            Text('Repartidor: ${data.courierName ?? 'Por asignar'}'),
+            Text('Costo de delivery: \$${data.deliveryFee.toStringAsFixed(2)}'),
             if (dur != null)
               Text(
                 'Tiempo total de entrega: ${dur ~/ 60}m ${dur % 60}s',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             const SizedBox(height: 4),
-            Text(
-              'Destino: ${data.deliveryAddress ?? 'Por confirmar'}',
-            ),
+            Text('Destino: ${data.deliveryAddress ?? 'Por confirmar'}'),
             if (data.shipment['delivered_at'] != null) ...[
               const SizedBox(height: 10),
               Container(

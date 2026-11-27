@@ -29,7 +29,6 @@ class Order {
   final double? deliveryLat;
   final double? deliveryLng;
   final String? customerName;
-  final String? customerPhone;
   final String? courierUserId;
   final String? courierName;
   final double? courierLat;
@@ -56,7 +55,6 @@ class Order {
     this.deliveryLat,
     this.deliveryLng,
     this.customerName,
-    this.customerPhone,
     this.courierUserId,
     this.courierName,
     this.courierLat,

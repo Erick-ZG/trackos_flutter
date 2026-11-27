@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../services/app_service.dart';
+import '../utils/phone_utils.dart';
 import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -40,27 +42,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
     try {
-    final ok = await AppService().register(
-      name: _nameCtrl.text.trim(),
-      email: _emailCtrl.text.trim(),
-      password: _passCtrl.text,
-      phone: _phoneCtrl.text.trim(),
-      address: _addressCtrl.text.trim(),
-    );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (ok) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (_) => false,
+      final ok = await AppService().register(
+        name: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+        phone: _phoneCtrl.text.trim(),
+        address: _addressCtrl.text.trim(),
       );
-    } else {
-      setState(
-          () => _error = 'Ya existe una cuenta con ese correo electrónico');
-    }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      if (ok) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (_) => false,
+        );
+      } else {
+        setState(
+          () => _error = 'Ya existe una cuenta con ese correo electrónico',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      setState(() { _loading = false; _error = e.toString().replaceFirst('Exception: ', ''); });
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
     }
   }
 
@@ -78,14 +84,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.person_add_rounded,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.person_add_rounded,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 8),
               Text(
                 'Datos personales',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -95,8 +103,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'El nombre es requerido' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'El nombre es requerido'
+                    : null,
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -117,8 +126,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                maxLength: 64,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (value) => PhoneUtils.validate(value),
                 decoration: const InputDecoration(
-                  labelText: 'Teléfono',
+                  labelText: 'Celular de Perú (opcional)',
+                  hintText: '999 000 001',
+                  helperText: 'Necesario para comprar. Prefijo +51 opcional.',
+                  helperMaxLines: 2,
                   prefixIcon: Icon(Icons.phone_outlined),
                   border: OutlineInputBorder(),
                 ),
@@ -136,8 +152,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 20),
               Text(
                 'Seguridad',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -148,15 +164,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePass
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined),
+                    icon: Icon(
+                      _obscurePass
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
                     onPressed: () =>
                         setState(() => _obscurePass = !_obscurePass),
                   ),
                 ),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'La contraseña es requerida';
+                  if (v == null || v.isEmpty)
+                    return 'La contraseña es requerida';
                   if (v.length < 6) return 'Mínimo 6 caracteres';
                   return null;
                 },
@@ -170,16 +189,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirm
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined),
+                    icon: Icon(
+                      _obscureConfirm
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
                     onPressed: () =>
                         setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Confirma tu contraseña';
-                  if (v != _passCtrl.text) return 'Las contraseñas no coinciden';
+                  if (v != _passCtrl.text)
+                    return 'Las contraseñas no coinciden';
                   return null;
                 },
               ),
@@ -194,11 +216,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                          child: Text(_error!,
-                              style: const TextStyle(color: Colors.red))),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -213,9 +242,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
-                      : const Text('Crear Cuenta', style: TextStyle(fontSize: 16)),
+                      : const Text(
+                          'Crear Cuenta',
+                          style: TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),

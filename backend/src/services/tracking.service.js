@@ -29,7 +29,7 @@ module.exports = async function tracking(pool, orderId, user) {
     if (!allowed) throw fail(404, 'Pedido no encontrado');
 
     const shipment = await client.query(
-      'SELECT s.*, c.name AS demo_courier_name, c.phone AS courier_phone FROM shipments s LEFT JOIN couriers c ON c.id = s.courier_id WHERE s.order_id = $1',
+      'SELECT s.*, c.name AS demo_courier_name FROM shipments s LEFT JOIN couriers c ON c.id = s.courier_id WHERE s.order_id = $1',
       [orderId]
     );
     const state = (
